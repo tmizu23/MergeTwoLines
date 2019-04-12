@@ -1,14 +1,6 @@
-# This file contains metadata for your plugin. Since 
-# version 2.0 of QGIS this is the proper way to supply 
-# information about a plugin. The old method of 
-# embedding metadata in __init__.py will 
-# is no longer supported since version 2.0.
-
-# This file should be included when you package your plugin.# Mandatory items:
-
 [general]
 name=MergeTwoLines
-qgisMinimumVersion=2.18
+qgisMinimumVersion=3.0
 description=merge two lines
 version=0.1
 author=Takayuki Mizutani

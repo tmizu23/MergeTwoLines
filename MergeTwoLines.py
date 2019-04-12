@@ -1,37 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
-/***************************************************************************
- MergeTwoLines
-                                 A QGIS plugin
- merge two lines
-                              -------------------
-        begin                : 2018-05-25
-        git sha              : $Format:%H$
-        copyright            : (C) 2018 by Takayuki Mizutani
-        email                : mizutani@ecoris.co.jp
- ***************************************************************************/
 
-/***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
-"""
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from __future__ import absolute_import
+from builtins import object
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtWidgets import *
+from qgis.PyQt.QtGui import *
 from qgis.core import *
 from qgis.gui import *
 import math
-import resources
+from . import resources
 import os.path
 
-
-
-
-class MergeTwoLines:
+class MergeTwoLines(object):
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -147,13 +127,17 @@ class MergeTwoLines:
     def merge(self):
         canvas = self.iface.mapCanvas()
         layer = canvas.currentLayer()
-        if layer.wkbType() == 2:
+        if layer.geometryType() == QgsWkbTypes.LineGeometry:
             selected_features = layer.selectedFeatures()
             if len(selected_features) == 2:
                 f0 = selected_features[0]
                 f1 = selected_features[1]
-                line0 = f0.geometry().asPolyline()
-                line1 = f1.geometry().asPolyline()
+                geom0 = f0.geometry()
+                geom0.convertToSingleType()
+                geom1 = f1.geometry()
+                geom1.convertToSingleType()
+                line0 = geom0.asPolyline()
+                line1 = geom1.asPolyline()
                 dist = [self.distance(li0, li1) for li0, li1 in
                         [(line0[-1], line1[0]), (line0[0], line1[-1]), (line0[0], line1[0]), (line0[-1], line1[-1])]]
                 type = dist.index(min(dist))
@@ -167,7 +151,12 @@ class MergeTwoLines:
                 elif type == 3:
                     line1.reverse()
                 line = line0 + line1[1:]
-                geom = QgsGeometry.fromPolyline(line)
+
+                if layer.wkbType()== QgsWkbTypes.LineString:
+                    geom = QgsGeometry.fromPolylineXY(line)
+                elif layer.wkbType()== QgsWkbTypes.MultiLineString:
+                    geom = QgsGeometry.fromMultiPolylineXY([line])
+
                 layer.beginEditCommand("Feature merged")
                 settings = QSettings()
                 disable_attributes = settings.value("/qgis/digitizing/disable_enter_attribute_values_dialog", False,
@@ -186,12 +175,10 @@ class MergeTwoLines:
                         layer.destroyEditCommand()
                 self.iface.mapCanvas().refresh()
             else:
-                self.iface.messageBar().pushMessage("Warning", "Select two feature!",
-                                               level=QgsMessageBar.WARNING)
+                self.iface.messageBar().pushWarning("Warning", "Select two feature!")
         else:
-            self.iface.messageBar().pushMessage("Warning", "Only Support LineString.",
-                                           level=QgsMessageBar.WARNING)
+            self.iface.messageBar().pushWarning("Warning", "Only Support LineString")
 
 
     def log(self,msg):
-        QgsMessageLog.logMessage(msg, 'MyPlugin',QgsMessageLog.INFO)
+        QgsMessageLog.logMessage(msg, 'MyPlugin')
